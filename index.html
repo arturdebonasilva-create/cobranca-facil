@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cobrança Fácil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+
+/* Layout: one narrow working column, summary strip on top, list of payers underneath, message panel opens inside the row. */
+:root {
+  --bg: #F3F6F7;
+  --surface: #FFFFFF;
+  --ink: #13222B;
+  --muted: #52646E;
+  --line: #D6DEE2;
+  --accent: #0A6C6C;
+  --accent-ink: #FFFFFF;
+  --ok: #1B7A4A;
+  --ok-bg: #E1F2E8;
+  --warn: #8F5700;
+  --warn-bg: #FBEDD3;
+  --bad: #B02A22;
+  --bad-bg: #FBE3E0;
+  --track: #DCE4E8;
+  --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E181E; --surface: #16252D; --ink: #E7EFF2; --muted: #9FB2BB; --line: #2A3C46;
+    --accent: #4FC2B6; --accent-ink: #06201D;
+    --ok: #6FD39A; --ok-bg: #163A28; --warn: #F0B95B; --warn-bg: #3B2B0E; --bad: #FF8E85; --bad-bg: #3E1A17;
+    --track: #25363F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E181E; --surface: #16252D; --ink: #E7EFF2; --muted: #9FB2BB; --line: #2A3C46;
+  --accent: #4FC2B6; --accent-ink: #06201D;
+  --ok: #6FD39A; --ok-bg: #163A28; --warn: #F0B95B; --warn-bg: #3B2B0E; --bad: #FF8E85; --bad-bg: #3E1A17;
+  --track: #25363F;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-block: 24px 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.app { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, p { margin: 0; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
+.top > div { min-width: 0; }
+.eyebrow { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+h1 { font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 52ch; margin-top: 6px; }
+.month { font-family: var(--font-data); font-size: 13px; color: var(--muted); text-transform: capitalize; }
+
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding: 2px 0 2px 12px; max-width: 70ch; }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 0; }
+.fig { padding: 0 16px; min-width: 0; border-left: 1px solid var(--line); }
+.fig:first-child { padding-left: 0; border-left: 0; }
+.fig .label { display: block; font-size: 12px; color: var(--muted); }
+.fig .value { display: block; font-family: var(--font-data); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.fig .sub { display: block; font-size: 12px; color: var(--muted); }
+.fig.late .value { color: var(--bad); }
+.fig.ok .value { color: var(--ok); }
+.bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--ok); width: 0; transition: width .3s ease; }
+.barlabel { font-size: 12px; color: var(--muted); }
+
+details.you, .add { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.you > summary { cursor: pointer; padding: 12px 16px; font-weight: 600; }
+details.you[open] > summary { border-bottom: 1px solid var(--line); }
+.you-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.add { padding: 16px; }
+.add h2, .listhead h2 { font-size: 17px; font-weight: 600; }
+.add h2 { margin-bottom: 12px; }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label, .panel label { font-size: 13px; font-weight: 500; }
+.field .opt { color: var(--muted); font-weight: 400; }
+input[type=text], input[type=tel], input[type=number], textarea {
+  width: 100%; min-width: 0; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink);
+}
+textarea { resize: vertical; line-height: 1.45; }
+.hint { font-size: 12px; color: var(--muted); }
+.err { font-size: 13px; color: var(--bad); min-height: 0; }
+.err.ok { color: var(--ok); }
+input[type=file] { font-size: 13px; max-width: 100%; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.import-box { border-top: 1px dashed var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 14px; min-height: 40px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-weight: 500; font-size: 14px; cursor: pointer; text-decoration: none;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--bad); }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+
+.listhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip .n { font-family: var(--font-data); font-size: 12px; margin-left: 4px; opacity: .8; }
+
+.list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.row-main { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 16px; }
+.who { min-width: 0; flex: 1 1 180px; }
+.who strong { display: block; font-size: 16px; overflow-wrap: anywhere; }
+.detail { display: block; font-size: 13px; color: var(--muted); }
+.amt { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.money { font-family: var(--font-data); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.pill-pago { background: var(--ok-bg); color: var(--ok); }
+.pill-pendente { background: var(--warn-bg); color: var(--warn); }
+.pill-atrasado { background: var(--bad-bg); color: var(--bad); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel { border-top: 1px dashed var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.panel-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 20px 16px; color: var(--muted); display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; pointer-events: none;
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast span { background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: 100%; }
+
+@media (max-width: 480px) {
+  .amt { align-items: flex-start; flex-direction: row; align-items: center; gap: 10px; }
+  .fig { padding: 0 12px; }
+  .fig .value { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar > span, .toast { transition: none; }
+}
+
+input[type=password], input[type=email] { width: 100%; min-width: 0; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+
+[hidden] { display: none !important; }
+.auth, .setup { max-width: 440px; margin: 40px auto 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+.auth h2, .setup h2 { font-size: 20px; font-weight: 700; }
+.auth form { display: flex; flex-direction: column; gap: 12px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font-size: 14px; }
+.pixbox { font-family: var(--font-data); font-size: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-wrap: anywhere; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; font-size: 13px; color: var(--muted); }
+.topbar > span { min-width: 0; overflow-wrap: anywhere; }
+.banner { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+.loading { text-align: center; color: var(--muted); padding: 60px 0; }
+</style>
+</head>
+<body>
+<main class="app">
+
+  <div id="viewLoading" class="loading">Carregando…</div>
+
+  <section id="viewSetup" class="setup" hidden>
+    <h2>Falta configurar</h2>
+    <p>Abra o arquivo <strong>config.js</strong> e preencha a URL e a chave do seu projeto Supabase. O passo a passo está no README.</p>
+  </section>
+
+  <section id="viewAuth" class="auth" hidden>
+    <div>
+      <p class="eyebrow">Cobrança Fácil</p>
+      <h2 id="authTitle">Entrar</h2>
+      <p class="lede">Controle quem pagou e cobre pelo WhatsApp com a mensagem pronta.</p>
+    </div>
+    <form id="authForm" novalidate>
+      <div class="field">
+        <label for="authEmail">E-mail</label>
+        <input type="text" id="authEmail" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="authPass">Senha</label>
+        <input type="password" id="authPass" autocomplete="current-password">
+        <span class="hint" id="authHint" hidden>Use pelo menos 8 caracteres.</span>
+      </div>
+      <button class="btn primary" type="submit" id="authSubmit">Entrar</button>
+      <p class="err" id="authMsg" role="alert"></p>
+    </form>
+    <p class="hint"><span id="authSwitchText">Ainda não tem conta?</span> <button type="button" class="linkbtn" id="authSwitch">Criar conta</button></p>
+  </section>
+
+  <div id="viewApp" hidden style="display:contents">
+    <header class="top">
+      <div>
+        <p class="eyebrow">Cobrança Fácil</p>
+        <h1>Quem pagou este mês</h1>
+        <p class="lede">Veja quem pagou e quem deve, e mande a cobrança pelo WhatsApp com a mensagem pronta.</p>
+      </div>
+      <span class="month" id="monthLabel"></span>
+    </header>
+
+    <div class="topbar">
+      <span id="whoami"></span>
+      <button class="linkbtn" type="button" id="btnLogout">Sair</button>
+    </div>
+
+    <section class="summary" aria-label="Resumo do mês">
+      <div class="figures">
+        <div class="fig"><span class="label">A receber</span><span class="value" id="fReceber">R$ 0,00</span><span class="sub" id="fReceberSub"></span></div>
+        <div class="fig ok"><span class="label">Recebido</span><span class="value" id="fRecebido">R$ 0,00</span><span class="sub" id="fRecebidoSub"></span></div>
+        <div class="fig late"><span class="label">Em atraso</span><span class="value" id="fAtraso">R$ 0,00</span><span class="sub" id="fAtrasoSub"></span></div>
+      </div>
+      <div>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Parte do mês já recebida" id="bar"><span id="barFill"></span></div>
+        <p class="barlabel" id="barLabel"></p>
+      </div>
+    </section>
+
+    <details class="you" id="you">
+      <summary>Seus dados (vão na mensagem)</summary>
+      <div class="you-body">
+        <div class="fields">
+          <div class="field">
+            <label for="pNome">Seu nome ou do seu negócio</label>
+            <input type="text" id="pNome" autocomplete="name" placeholder="Ex.: Ana Treinos">
+          </div>
+          <div class="field">
+            <label for="pPix">Sua chave Pix</label>
+            <input type="text" id="pPix" autocomplete="off" placeholder="CPF, e-mail, telefone ou chave aleatória">
+          </div>
+        </div>
+        <p class="hint" id="settingsMsg">A chave entra como texto na mensagem. Confira sempre antes de enviar.</p>
+      </div>
+    </details>
+
+    <section class="add" aria-labelledby="addTitle">
+      <h2 id="addTitle">Novo pagador</h2>
+      <form id="addForm" novalidate>
+        <div class="fields">
+          <div class="field">
+            <label for="aNome">Nome</label>
+            <input type="text" id="aNome" autocomplete="off" placeholder="Ex.: Marina Duarte">
+          </div>
+          <div class="field">
+            <label for="aZap">WhatsApp <span class="opt">(opcional)</span></label>
+            <input type="tel" id="aZap" inputmode="tel" autocomplete="off" placeholder="(11) 91234-5678">
+          </div>
+          <div class="field">
+            <label for="aValor">Valor da mensalidade (R$)</label>
+            <input type="number" id="aValor" inputmode="decimal" min="0" step="0.01" placeholder="180">
+          </div>
+          <div class="field">
+            <label for="aDia">Dia do vencimento</label>
+            <input type="number" id="aDia" inputmode="numeric" min="1" max="31" step="1" placeholder="10">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" type="submit" id="addSubmit">Adicionar</button>
+          <span class="err" id="formErr" role="alert"></span>
+        </div>
+      </form>
+    </section>
+
+    <section aria-labelledby="listTitle">
+      <div class="listhead">
+        <h2 id="listTitle">Pagadores do mês</h2>
+        <div class="chips" id="chips" role="group" aria-label="Filtrar por situação"></div>
+      </div>
+      <ul class="list" id="list"></ul>
+    </section>
+
+    <details class="you" id="backup">
+      <summary>Backup e importação</summary>
+      <div class="you-body">
+        <p class="hint">Seus dados já ficam salvos na sua conta. O backup serve para guardar uma cópia, ou para trazer a lista do protótipo antigo.</p>
+        <div class="backup-actions">
+          <button class="btn small" type="button" id="btnExport">Exportar lista</button>
+        </div>
+        <div class="field" id="exportBox" hidden>
+          <label for="exportText">Texto do backup (selecione e copie)</label>
+          <textarea id="exportText" rows="4" readonly></textarea>
+        </div>
+        <div class="import-box">
+          <div class="field">
+            <label for="importFile">Importar de um arquivo de backup</label>
+            <input type="file" id="importFile" accept=".json,application/json">
+          </div>
+          <div class="field">
+            <label for="importText">Ou cole aqui o texto do backup</label>
+            <textarea id="importText" rows="4" placeholder="Cole o texto completo do backup"></textarea>
+          </div>
+          <div><button class="btn small" type="button" id="btnImportText">Importar texto</button></div>
+          <div id="importConfirm" hidden>
+            <p id="importMsg"></p>
+            <div class="backup-actions" style="margin-top:8px">
+              <button class="btn small primary" type="button" id="importYes">Adicionar à minha lista</button>
+              <button class="btn small" type="button" id="importNo">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <p class="err" id="backupMsg" role="status"></p>
+      </div>
+    </details>
+  </div>
+</main>
+<div class="toast" aria-live="polite" role="status"><span id="toastText" hidden></span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+
+/* ---------- logic (pure, testable) ---------- */
+var BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+function monthKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function daysInMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
+function dueDay(p, d) { return Math.min(p.dia, daysInMonth(d)); }
+function statusOf(p, d) {
+  var mk = monthKey(d);
+  if (p.paid.indexOf(mk) !== -1) return { kind: 'pago' };
+  var due = dueDay(p, d), t = d.getDate();
+  if (t > due) return { kind: 'atrasado', late: t - due };
+  return { kind: 'pendente', left: due - t };
+}
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function detailText(p, st, d) {
+  var due = dueDay(p, d);
+  if (st.kind === 'pago') return 'Mensalidade deste mês paga';
+  if (st.kind === 'atrasado') return 'Venceu dia ' + due + ' · ' + plural(st.late, 'dia', 'dias') + ' de atraso';
+  if (st.left === 0) return 'Vence hoje (dia ' + due + ')';
+  return 'Vence dia ' + due + ' · em ' + plural(st.left, 'dia', 'dias');
+}
+function buildMessage(p, st, d, prest) {
+  var mes = d.toLocaleDateString('pt-BR', { month: 'long' });
+  var first = p.nome.trim().split(/\s+/)[0];
+  var pix = (prest.pix || '').trim();
+  var sign = (prest.nome || '').trim();
+  var lines = [];
+  if (st.kind === 'atrasado') {
+    lines.push('Oi, ' + first + ', tudo bem? A mensalidade de ' + mes + ' (' + BRL.format(p.valor) + ', vencimento dia ' + dueDay(p, d) + ') ainda está em aberto.');
+  } else {
+    lines.push('Oi, ' + first + '! Passando para lembrar da mensalidade de ' + mes + ': ' + BRL.format(p.valor) + ', com vencimento dia ' + dueDay(p, d) + '.');
+  }
+  if (pix) lines.push('Chave Pix: ' + pix);
+  lines.push(st.kind === 'atrasado' ? 'Se já pagou, me avise que eu dou baixa. Obrigado!' : 'Qualquer dúvida é só falar. Obrigado!');
+  if (sign) lines.push('— ' + sign);
+  return lines.join('\n\n');
+}
+function waLink(phone, text) {
+  var n = (phone || '').replace(/\D/g, '');
+  if (n.length < 10) return null;
+  if (n.length <= 11) n = '55' + n;
+  if (n.length > 13) return null;
+  return 'https://wa.me/' + n + '?text=' + encodeURIComponent(text);
+}
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function validImport(obj) {
+  if (!obj || obj.app !== 'cobranca-facil' || !Array.isArray(obj.payers) || obj.payers.length > 2000) return null;
+  var out = [];
+  for (var i = 0; i < obj.payers.length; i++) {
+    var p = obj.payers[i];
+    if (!p || typeof p.nome !== 'string' || !p.nome.trim()) return null;
+    var valor = Number(p.valor), dia = parseInt(p.dia, 10);
+    if (!(valor > 0) || !(dia >= 1 && dia <= 31)) return null;
+    out.push({
+      id: uid(),
+      nome: p.nome.trim().slice(0, 80),
+      zap: typeof p.zap === 'string' ? p.zap.slice(0, 30) : '',
+      valor: Math.round(valor * 100) / 100,
+      dia: dia,
+      paid: Array.isArray(p.paid) ? p.paid.filter(function (m) { return typeof m === 'string' && /^\d{4}-\d{2}$/.test(m); }) : [],
+      ex: false
+    });
+  }
+  var pr = obj.prestador || {};
+  return {
+    prestador: {
+      nome: typeof pr.nome === 'string' ? pr.nome.slice(0, 80) : '',
+      pix: typeof pr.pix === 'string' ? pr.pix.slice(0, 120) : ''
+    },
+    payers: out
+  };
+}
+
+
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function todayStr() { var d = new Date(); return monthKey(d) + '-' + String(d.getDate()).padStart(2, '0'); }
+function fmtDate(iso) { var p = String(iso).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+function daysUntil(iso) {
+  var p = iso.split('-').map(Number);
+  var a = new Date(p[0], p[1] - 1, p[2]), n = new Date();
+  var b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.round((a - b) / 86400000);
+}
+
+var cfg = window.APP_CONFIG || {};
+var sb = null;
+var user = null;
+var settings = { nome: '', pix: '' };
+var payers = [];
+var filter = 'todos';
+var openId = null;
+var confirmId = null;
+var drafts = {};
+var authMode = 'login';
+var pendingImport = null;
+var toastTimer = null;
+var settingsTimer = null;
+var routing = 0;
+
+function show(name) {
+  ['Loading', 'Setup', 'Auth', 'App'].forEach(function (n) { $('#view' + n).hidden = (n !== name); });
+  $('#viewApp').style.display = name === 'App' ? 'contents' : '';
+}
+function toast(msg) {
+  var el = $('#toastText');
+  el.textContent = msg; el.hidden = false;
+  $('.toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { $('.toast').classList.remove('show'); }, 2600);
+}
+
+/* ---------- login ---------- */
+function setAuthMode(m) {
+  authMode = m;
+  $('#authTitle').textContent = m === 'login' ? 'Entrar' : 'Criar conta';
+  $('#authSubmit').textContent = m === 'login' ? 'Entrar' : 'Criar conta';
+  $('#authSwitchText').textContent = m === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?';
+  $('#authSwitch').textContent = m === 'login' ? 'Criar conta' : 'Entrar';
+  $('#authHint').hidden = m === 'login';
+  $('#authPass').setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
+  $('#authMsg').textContent = ''; $('#authMsg').className = 'err';
+}
+function authError(e) {
+  var m = (e && e.message || '').toLowerCase();
+  if (m.indexOf('invalid login') !== -1) return 'E-mail ou senha incorretos.';
+  if (m.indexOf('already registered') !== -1 || m.indexOf('already been registered') !== -1) return 'Este e-mail já tem conta. Toque em “Entrar”.';
+  if (m.indexOf('password') !== -1 && m.indexOf('6') !== -1) return 'A senha precisa de pelo menos 8 caracteres.';
+  if (m.indexOf('email not confirmed') !== -1) return 'Confirme seu e-mail pelo link que enviamos e depois entre.';
+  if (m.indexOf('rate limit') !== -1) return 'Muitas tentativas. Espere alguns minutos e tente de novo.';
+  if (m.indexOf('fetch') !== -1 || m.indexOf('network') !== -1) return 'Sem conexão. Confira a internet e tente de novo.';
+  return 'Não deu certo. Confira os dados e tente de novo.';
+}
+$('#authSwitch').addEventListener('click', function () { setAuthMode(authMode === 'login' ? 'signup' : 'login'); });
+$('#authForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var email = $('#authEmail').value.trim();
+  var pass = $('#authPass').value;
+  var msg = $('#authMsg');
+  msg.className = 'err';
+  if (!/^\S+@\S+\.\S+$/.test(email)) { msg.textContent = 'Informe um e-mail válido.'; $('#authEmail').focus(); return; }
+  if (pass.length < 8) { msg.textContent = 'A senha precisa de pelo menos 8 caracteres.'; $('#authPass').focus(); return; }
+  msg.textContent = '';
+  var btn = $('#authSubmit'); btn.disabled = true;
+  var p = authMode === 'login'
+    ? sb.auth.signInWithPassword({ email: email, password: pass })
+    : sb.auth.signUp({ email: email, password: pass });
+  p.then(function (res) {
+    btn.disabled = false;
+    if (res.error) { msg.textContent = authError(res.error); return; }
+    if (authMode === 'signup' && !res.data.session) {
+      msg.className = 'err ok';
+      msg.textContent = 'Conta criada. Enviamos um link de confirmação para o seu e-mail. Confirme e depois entre.';
+      setAuthMode('login');
+      msg.className = 'err ok';
+      msg.textContent = 'Conta criada. Enviamos um link de confirmação para o seu e-mail. Confirme e depois entre.';
+    }
+  }, function (err) { btn.disabled = false; msg.textContent = authError(err); });
+});
+function logout() { sb.auth.signOut().then(function () { toast('Você saiu.'); }); }
+$('#btnLogout').addEventListener('click', logout);
+
+/* ---------- rotas ---------- */
+function route(session) {
+  var my = ++routing;
+  if (!session) {
+    user = null; payers = []; settings = { nome: '', pix: '' };
+    openId = null; confirmId = null; drafts = {};
+    $('#authPass').value = '';
+    setAuthMode('login');
+    show('Auth'); return;
+  }
+  user = session.user;
+  show('Loading');
+  loadData(my);
+}
+
+function loadData(my) {
+  Promise.all([
+    sb.from('settings').select('nome,pix').eq('user_id', user.id).maybeSingle(),
+    sb.from('payers').select('id,nome,zap,valor,dia,paid').order('created_at', { ascending: true })
+  ]).then(function (rs) {
+    if (my !== routing) return;
+    if (rs[0].error || rs[1].error) { show('Auth'); $('#authMsg').textContent = 'Não consegui carregar seus dados. Tente entrar de novo.'; return; }
+    settings = rs[0].data || { nome: '', pix: '' };
+    payers = (rs[1].data || []).map(function (p) { return { id: p.id, nome: p.nome, zap: p.zap || '', valor: Number(p.valor), dia: p.dia, paid: p.paid || [] }; });
+    $('#pNome').value = settings.nome || ''; $('#pPix').value = settings.pix || '';
+    $('#whoami').textContent = user.email;
+    show('App'); render();
+  });
+}
+
+/* ---------- tela do app ---------- */
+function render() {
+  var d = new Date();
+  $('#monthLabel').textContent = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  var items = payers.map(function (p) { return { p: p, st: statusOf(p, d) }; });
+
+  var rec = 0, abr = 0, atr = 0, nRec = 0, nAbr = 0, nAtr = 0;
+  items.forEach(function (it) {
+    if (it.st.kind === 'pago') { rec += it.p.valor; nRec++; }
+    else { abr += it.p.valor; nAbr++; if (it.st.kind === 'atrasado') { atr += it.p.valor; nAtr++; } }
+  });
+  var total = rec + abr;
+  $('#fReceber').textContent = BRL.format(abr);
+  $('#fReceberSub').textContent = plural(nAbr, 'pagador', 'pagadores');
+  $('#fRecebido').textContent = BRL.format(rec);
+  $('#fRecebidoSub').textContent = plural(nRec, 'pagador', 'pagadores');
+  $('#fAtraso').textContent = BRL.format(atr);
+  $('#fAtrasoSub').textContent = plural(nAtr, 'pagador', 'pagadores');
+  var pct = total > 0 ? Math.round(rec / total * 100) : 0;
+  $('#barFill').style.width = pct + '%';
+  $('#bar').setAttribute('aria-valuenow', String(pct));
+  $('#barLabel').textContent = total > 0 ? pct + '% do total do mês já recebido (' + BRL.format(rec) + ' de ' + BRL.format(total) + ')' : 'Nenhum valor cadastrado ainda.';
+
+  var counts = { todos: items.length, atrasado: nAtr, pendente: nAbr - nAtr, pago: nRec };
+  var defs = [['todos', 'Todos'], ['atrasado', 'Atrasados'], ['pendente', 'Pendentes'], ['pago', 'Pagos']];
+  $('#chips').innerHTML = defs.map(function (c) {
+    return '<button type="button" class="chip" data-filter="' + c[0] + '" aria-pressed="' + (filter === c[0]) + '">' + c[1] + '<span class="n">' + counts[c[0]] + '</span></button>';
+  }).join('');
+
+  var order = { atrasado: 0, pendente: 1, pago: 2 };
+  var shown = items.filter(function (it) { return filter === 'todos' || it.st.kind === filter; });
+  shown.sort(function (a, b) {
+    if (order[a.st.kind] !== order[b.st.kind]) return order[a.st.kind] - order[b.st.kind];
+    if (a.st.kind === 'atrasado') return b.st.late - a.st.late;
+    return dueDay(a.p, d) - dueDay(b.p, d);
+  });
+
+  var list = $('#list');
+  if (!shown.length) {
+    list.innerHTML = '<li class="empty">' + (payers.length
+      ? 'Nenhum pagador nesta situação.'
+      : 'Nenhum pagador ainda. Cadastre o primeiro no formulário acima.') + '</li>';
+    return;
+  }
+  list.innerHTML = shown.map(function (it) { return rowHtml(it.p, it.st, d); }).join('');
+}
+
+function rowHtml(p, st, d) {
+  var pillLabel = { pago: 'Pago', pendente: 'Pendente', atrasado: 'Atrasado' }[st.kind];
+  var open = openId === p.id;
+  var actions = '';
+  if (st.kind !== 'pago') {
+    actions += '<button type="button" class="btn small primary" data-action="toggle" aria-expanded="' + open + '">' + (open ? 'Fechar mensagem' : 'Cobrar') + '</button>';
+    actions += '<button type="button" class="btn small" data-action="paid">Marcar como pago</button>';
+  } else {
+    actions += '<button type="button" class="btn small" data-action="unpaid">Desfazer pagamento</button>';
+  }
+  if (confirmId === p.id) {
+    actions += '<button type="button" class="btn small danger" data-action="remove-yes">Confirmar remoção</button><button type="button" class="btn small" data-action="remove-no">Cancelar</button>';
+  } else {
+    actions += '<button type="button" class="btn small danger" data-action="remove">Remover</button>';
+  }
+  var panel = '';
+  if (open && st.kind !== 'pago') {
+    var msg = drafts[p.id] != null ? drafts[p.id] : buildMessage(p, st, d, settings);
+    var link = waLink(p.zap, msg);
+    var first = esc(p.nome.trim().split(/\s+/)[0]);
+    panel = '<div class="panel">' +
+      '<label for="msg-' + p.id + '">Mensagem para ' + first + '</label>' +
+      '<textarea id="msg-' + p.id + '" rows="8" data-msg="' + p.id + '">' + esc(msg) + '</textarea>' +
+      '<div class="panel-actions">' +
+      (link ? '<a class="btn small primary" data-wa="' + p.id + '" href="' + esc(link) + '" target="_blank" rel="noopener">Abrir no WhatsApp</a>'
+            : '<span class="hint">Cadastre o WhatsApp com DDD para abrir a conversa direto. Por enquanto, copie a mensagem.</span>') +
+      '<button type="button" class="btn small" data-action="copy">Copiar mensagem</button>' +
+      '</div>' +
+      ((settings.pix || '').trim() ? '' : '<p class="hint">Dica: preencha sua chave Pix em “Seus dados” para ela entrar na mensagem.</p>') +
+      '<p class="hint">Você pode editar o texto antes de enviar. O WhatsApp abre com a mensagem pronta; o envio é feito por você.</p>' +
+      '</div>';
+  }
+  return '<li class="row" data-id="' + p.id + '">' +
+    '<div class="row-main">' +
+      '<div class="who"><strong>' + esc(p.nome) + '</strong><span class="detail">' + esc(detailText(p, st, d)) + '</span></div>' +
+      '<div class="amt"><span class="money">' + BRL.format(p.valor) + '</span><span class="pill pill-' + st.kind + '">' + pillLabel + '</span></div>' +
+    '</div>' +
+    '<div class="row-actions">' + actions + '</div>' + panel +
+    '</li>';
+}
+
+function findPayer(id) { return payers.filter(function (p) { return p.id === id; })[0]; }
+function dbFail(r) {
+  if (r && r.error) { toast('Não consegui salvar. Confira a conexão e tente de novo.'); return true; }
+  return false;
+}
+
+$('#list').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-action]');
+  if (!b) return;
+  var act = b.getAttribute('data-action');
+  var li = b.closest('[data-id]');
+  var id = li ? li.getAttribute('data-id') : null;
+  var p = id ? findPayer(id) : null;
+  var mk = monthKey(new Date());
+  if (!p) return;
+
+  if (act === 'toggle') { openId = openId === id ? null : id; render(); }
+  else if (act === 'paid' || act === 'unpaid') {
+    var before = p.paid.slice();
+    var next = act === 'paid'
+      ? (before.indexOf(mk) === -1 ? before.concat([mk]) : before)
+      : before.filter(function (m) { return m !== mk; });
+    p.paid = next;
+    if (act === 'paid' && openId === id) openId = null;
+    render();
+    sb.from('payers').update({ paid: next }).eq('id', id).then(function (r) {
+      if (dbFail(r)) { p.paid = before; if (user) render(); return; }
+      if (act === 'paid') toast(p.nome.split(' ')[0] + ' marcado como pago.');
+    });
+  }
+  else if (act === 'remove') { confirmId = id; render(); }
+  else if (act === 'remove-no') { confirmId = null; render(); }
+  else if (act === 'remove-yes') {
+    sb.from('payers').delete().eq('id', id).then(function (r) {
+      if (dbFail(r)) return;
+      payers = payers.filter(function (x) { return x.id !== id; });
+      delete drafts[id]; confirmId = null; if (openId === id) openId = null;
+      render();
+    });
+  }
+  else if (act === 'copy') {
+    var ta = li.querySelector('textarea');
+    var txt = ta ? ta.value : '';
+    var done = function () { toast('Mensagem copiada.'); };
+    var fail = function () { if (ta) { ta.focus(); ta.select(); } toast('Não deu para copiar sozinho. Selecionei o texto: copie manualmente.'); };
+    try { navigator.clipboard.writeText(txt).then(done, fail); } catch (err) { fail(); }
+  }
+});
+
+$('#list').addEventListener('input', function (e) {
+  var ta = e.target.closest('textarea[data-msg]');
+  if (!ta) return;
+  var id = ta.getAttribute('data-msg');
+  drafts[id] = ta.value;
+  var p = findPayer(id);
+  var a = ta.closest('.row').querySelector('[data-wa]');
+  if (a && p) { var l = waLink(p.zap, ta.value); if (l) a.setAttribute('href', l); }
+});
+
+$('#chips').addEventListener('click', function (e) {
+  var c = e.target.closest('[data-filter]');
+  if (!c) return;
+  filter = c.getAttribute('data-filter');
+  render();
+});
+
+function onYouInput() {
+  settings = { nome: $('#pNome').value, pix: $('#pPix').value };
+  drafts = {};
+  if (openId) render();
+  var note = $('#settingsMsg');
+  note.textContent = 'Salvando…';
+  clearTimeout(settingsTimer);
+  settingsTimer = setTimeout(function () {
+    sb.from('settings').upsert({ user_id: user.id, nome: settings.nome.slice(0, 80), pix: settings.pix.slice(0, 120) }, { onConflict: 'user_id' }).then(function (r) {
+      note.textContent = r.error ? 'Não consegui salvar seus dados. Tente de novo.' : 'Salvo. A chave entra como texto na mensagem; confira sempre antes de enviar.';
+    });
+  }, 600);
+}
+$('#pNome').addEventListener('input', onYouInput);
+$('#pPix').addEventListener('input', onYouInput);
+
+$('#addForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var nome = $('#aNome').value.trim();
+  var zap = $('#aZap').value.trim();
+  var valor = parseFloat(String($('#aValor').value).replace(',', '.'));
+  var dia = parseInt($('#aDia').value, 10);
+  var err = $('#formErr');
+  if (!nome) { err.textContent = 'Informe o nome do pagador.'; $('#aNome').focus(); return; }
+  if (!(valor > 0)) { err.textContent = 'Informe um valor maior que zero.'; $('#aValor').focus(); return; }
+  if (!(dia >= 1 && dia <= 31)) { err.textContent = 'O dia do vencimento deve ficar entre 1 e 31.'; $('#aDia').focus(); return; }
+  if (zap && zap.replace(/\D/g, '').length < 10) { err.textContent = 'O WhatsApp precisa do DDD. Exemplo: (11) 91234-5678.'; $('#aZap').focus(); return; }
+  err.textContent = '';
+  var btn = $('#addSubmit'); btn.disabled = true;
+  sb.from('payers').insert({ user_id: user.id, nome: nome.slice(0, 80), zap: zap, valor: Math.round(valor * 100) / 100, dia: dia, paid: [] }).select('id,nome,zap,valor,dia,paid').single().then(function (r) {
+    btn.disabled = false;
+    if (dbFail(r)) return;
+    var p = r.data;
+    payers.push({ id: p.id, nome: p.nome, zap: p.zap || '', valor: Number(p.valor), dia: p.dia, paid: p.paid || [] });
+    $('#addForm').reset();
+    render();
+    toast(nome.split(' ')[0] + ' adicionado.');
+    $('#aNome').focus();
+  });
+});
+
+/* ---------- backup ---------- */
+function backupMsg(text, ok) { var el = $('#backupMsg'); el.textContent = text; el.className = 'err' + (ok ? ' ok' : ''); }
+function exportString() {
+  return JSON.stringify({ app: 'cobranca-facil', version: 1, exportadoEm: new Date().toISOString(), prestador: settings, payers: payers });
+}
+$('#btnExport').addEventListener('click', function () {
+  var str = exportString();
+  var done = false;
+  try {
+    var blob = new Blob([str], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cobranca-facil-backup-' + monthKey(new Date()) + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    done = true;
+  } catch (e) {}
+  $('#exportBox').hidden = false;
+  var ta = $('#exportText'); ta.value = str;
+  backupMsg(done ? 'Backup baixado. O texto abaixo é a mesma cópia, caso o arquivo não apareça.' : 'Copie o texto abaixo e guarde em um lugar seguro.', done);
+});
+function askImport(str) {
+  var obj = null;
+  try { obj = JSON.parse(str); } catch (e) {}
+  var clean = validImport(obj);
+  if (!clean) { pendingImport = null; $('#importConfirm').hidden = true; backupMsg('Esse texto não parece um backup do Cobrança Fácil. Confira se copiou tudo.', false); return; }
+  pendingImport = clean;
+  $('#importMsg').textContent = 'Encontrei ' + plural(clean.payers.length, 'pagador', 'pagadores') + '. Eles serão adicionados à sua lista atual.';
+  $('#importConfirm').hidden = false;
+  backupMsg('', false);
+}
+$('#btnImportText').addEventListener('click', function () { askImport($('#importText').value); });
+$('#importFile').addEventListener('change', function (e) {
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  if (f.size > 2 * 1024 * 1024) { backupMsg('O arquivo é grande demais para ser um backup.', false); return; }
+  var r = new FileReader();
+  r.onload = function () { askImport(String(r.result)); };
+  r.onerror = function () { backupMsg('Não consegui ler o arquivo.', false); };
+  r.readAsText(f);
+});
+$('#importNo').addEventListener('click', function () { pendingImport = null; $('#importConfirm').hidden = true; });
+$('#importYes').addEventListener('click', function () {
+  if (!pendingImport) return;
+  var rows = pendingImport.payers.map(function (p) { return { user_id: user.id, nome: p.nome, zap: p.zap, valor: p.valor, dia: p.dia, paid: p.paid }; });
+  var btn = $('#importYes'); btn.disabled = true;
+  sb.from('payers').insert(rows).select('id,nome,zap,valor,dia,paid').then(function (r) {
+    btn.disabled = false;
+    if (dbFail(r)) { backupMsg('Não consegui importar. Tente de novo.', false); return; }
+    (r.data || []).forEach(function (p) { payers.push({ id: p.id, nome: p.nome, zap: p.zap || '', valor: Number(p.valor), dia: p.dia, paid: p.paid || [] }); });
+    pendingImport = null;
+    $('#importConfirm').hidden = true; $('#importText').value = ''; $('#importFile').value = '';
+    render();
+    backupMsg('Lista importada.', true);
+    toast('Lista importada.');
+  });
+});
+
+/* ---------- início ---------- */
+function configured() {
+  return cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && String(cfg.SUPABASE_URL).indexOf('COLE_AQUI') === -1 && String(cfg.SUPABASE_ANON_KEY).indexOf('COLE_AQUI') === -1;
+}
+(function boot() {
+  setAuthMode('login');
+  if (!configured() || !window.supabase) { show('Setup'); return; }
+  try {
+    sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  } catch (e) { show('Setup'); return; }
+  sb.auth.onAuthStateChange(function (event, session) {
+    // renovações de token e eventos repetidos do mesmo usuário não recarregam a tela
+    if (session && user && session.user.id === user.id && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) return;
+    setTimeout(function () { route(session); }, 0);
+  });
+})();
+</script>
+</body>
+</html>
